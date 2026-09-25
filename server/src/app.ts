@@ -37,6 +37,11 @@ app.use('/api/auth', authRouter);
 app.get('/api/me', requireAuth, getCurrentUser);
 app.use('/api/scans', scanRouter);
 
+// Local test website for deterministic analyzer testing (Spec Item 55)
+import { serveDemoTarget } from './modules/demo/demoTarget.js';
+app.get('/demo-target', serveDemoTarget);
+
+
 
 
 // 404 Handler
