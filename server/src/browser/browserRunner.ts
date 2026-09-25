@@ -40,6 +40,9 @@ export async function collectPageContext(targetUrl: string): Promise<PageContext
     await page.setViewport({ width: 1366, height: 768 });
     page.setDefaultNavigationTimeout(SCAN_TIMEOUT_MS);
 
+    // Provide esbuild runtime shim in browser context for tsx compatibility
+    await page.evaluateOnNewDocument('window.__name = (t) => t; self.__name = (t) => t;');
+
     let redirectCount = 0;
     const responseHeaders: Record<string, string> = {};
     let mainStatusCode = 200;
@@ -106,6 +109,9 @@ export async function collectPageContext(targetUrl: string): Promise<PageContext
     await new Promise((r) => setTimeout(r, 500));
 
     const finalUrl = page.url();
+
+    // Ensure __name shim is set in the current execution context
+    await page.evaluate('window.__name = (t) => t; self.__name = (t) => t;');
 
     // Extract DOM metrics and elements directly from the rendered browser page
     const extractedData = await page.evaluate(() => {

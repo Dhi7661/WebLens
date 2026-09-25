@@ -63,12 +63,24 @@ export async function validateAndNormalizeUrl(rawUrl: string): Promise<UrlValida
 
   const hostname = parsed.hostname.toLowerCase();
 
-  // 2. Reject internal and loopback hostnames
+  const allowLocal = process.env.ALLOW_LOCAL_SCANS === 'true' && process.env.NODE_ENV !== 'production';
+
+  // 2. Reject internal and loopback hostnames unless explicitly enabled in development
   const forbiddenHostnames = ['localhost', 'local', 'internal', '0.0.0.0'];
-  if (forbiddenHostnames.includes(hostname) || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+  if (!allowLocal && (forbiddenHostnames.includes(hostname) || hostname.endsWith('.local') || hostname.endsWith('.internal'))) {
     return {
       valid: false,
       error: 'Scanning localhost, loopback, and internal addresses is forbidden (SSRF Guard).',
+    };
+  }
+
+  // Fast-track localhost in development mode if explicitly enabled
+  if (allowLocal && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+    parsed.hash = '';
+    return {
+      valid: true,
+      normalizedUrl: parsed.toString(),
+      hostname,
     };
   }
 
