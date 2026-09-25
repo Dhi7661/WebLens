@@ -156,6 +156,18 @@ export const scanApi = {
   }),
   compare: (baseScanId: string, targetScanId: string) =>
     apiClient<CompareResult>(`/scans/compare?baseScanId=${baseScanId}&targetScanId=${targetScanId}`),
+  share: (id: string) =>
+    apiClient<{ shareToken: string; isPublic: boolean }>(`/scans/${id}/share`, {
+      method: 'POST',
+    }),
+  revokeShare: (id: string) =>
+    apiClient<{ isPublic: boolean }>(`/scans/${id}/share`, {
+      method: 'DELETE',
+    }),
+  getShared: (token: string) =>
+    apiClient<{ scan: ScanRecord; findings: FindingRecord[] }>(`/scans/shared/${token}`),
+  getExportJsonUrl: (id: string, token?: string) =>
+    `${API_BASE}/scans/${id}/export/json${token ? `?token=${encodeURIComponent(token)}` : ''}`,
 };
 
 

@@ -336,4 +336,231 @@ export async function compareScans(req: Request, res: Response): Promise<void> {
   }
 }
 
+/**
+ * Generates or activates a cryptographically unguessable public share token for a scan.
+ */
+export async function shareScan(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = req.user?.userId;
+
+  try {
+    const scan = await Scan.findById(id);
+    if (!scan) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'SCAN_NOT_FOUND', message: 'Scan not found' },
+      });
+      return;
+    }
+
+    if (scan.ownerId.toString() !== userId) {
+      res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'You do not own this scan' },
+      });
+      return;
+    }
+
+    if (!scan.shareToken) {
+      const crypto = await import('node:crypto');
+      scan.shareToken = crypto.randomBytes(24).toString('hex');
+    }
+    scan.isPublic = true;
+    await scan.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        shareToken: scan.shareToken,
+        isPublic: true,
+      },
+    });
+  } catch (error) {
+    console.error('[Share Scan Error]:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'SHARE_FAILED', message: 'Failed to share scan' },
+    });
+  }
+}
+
+/**
+ * Revokes public access to a scan report.
+ */
+export async function revokeShareScan(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = req.user?.userId;
+
+  try {
+    const scan = await Scan.findById(id);
+    if (!scan) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'SCAN_NOT_FOUND', message: 'Scan not found' },
+      });
+      return;
+    }
+
+    if (scan.ownerId.toString() !== userId) {
+      res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'You do not own this scan' },
+      });
+      return;
+    }
+
+    scan.isPublic = false;
+    await scan.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        isPublic: false,
+      },
+    });
+  } catch (error) {
+    console.error('[Revoke Share Error]:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'REVOKE_FAILED', message: 'Failed to revoke public access' },
+    });
+  }
+}
+
+/**
+ * Public unauthenticated endpoint: retrieves a report via valid public share token.
+ */
+export async function getSharedScanReport(req: Request, res: Response): Promise<void> {
+  const { token } = req.params;
+
+  try {
+    const scan = await Scan.findOne({ shareToken: token, isPublic: true });
+    if (!scan) {
+      res.status(404).json({
+        success: false,
+        error: {
+          code: 'SHARED_REPORT_NOT_FOUND',
+          message: 'The shared audit report does not exist or public access has been revoked.',
+        },
+      });
+      return;
+    }
+
+    const { Finding } = await import('../findings/finding.model.js');
+    const findings = await Finding.find({ scanId: scan._id }).sort({ createdAt: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        scan: scan.toJSON(),
+        findings: findings.map((f) => f.toJSON()),
+      },
+    });
+  } catch (error) {
+    console.error('[Get Shared Scan Error]:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'FETCH_SHARED_REPORT_FAILED', message: 'Could not load shared report' },
+    });
+  }
+}
+
+/**
+ * Exports structured audit report data as downloadable JSON.
+ */
+export async function exportScanJson(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { token } = req.query;
+  const userId = req.user?.userId;
+
+  try {
+    const scan = await Scan.findById(id);
+    if (!scan) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'SCAN_NOT_FOUND', message: 'Scan not found' },
+      });
+      return;
+    }
+
+    // Must be owner OR have active public share token
+    const isOwner = userId && scan.ownerId.toString() === userId;
+    const isPublicAuthorized = scan.isPublic && scan.shareToken === token;
+
+    if (!isOwner && !isPublicAuthorized) {
+      res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'You do not have permission to export this report' },
+      });
+      return;
+    }
+
+    const { Finding } = await import('../findings/finding.model.js');
+    const findings = await Finding.find({ scanId: scan._id }).sort({ createdAt: 1 });
+
+    const exportPayload = {
+      generator: 'WebLens Website Intelligence Platform',
+      specVersion: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      website: {
+        requestedUrl: scan.requestedUrl,
+        finalUrl: scan.finalUrl,
+      },
+      audit: {
+        id: scan._id.toString(),
+        completedAt: scan.completedAt,
+        durationMs: scan.durationMs,
+        overallScore: scan.overallScore,
+        categoryScores: scan.categoryScores,
+      },
+      summary: {
+        totalFindings: findings.length,
+        byCategory: {
+          seo: findings.filter((f) => f.category === 'SEO').length,
+          accessibility: findings.filter((f) => f.category === 'Accessibility').length,
+          security: findings.filter((f) => f.category === 'Security').length,
+          performance: findings.filter((f) => f.category === 'Performance').length,
+          technology: findings.filter((f) => f.category === 'Technology').length,
+        },
+        bySeverity: {
+          critical: findings.filter((f) => f.severity === 'critical').length,
+          high: findings.filter((f) => f.severity === 'high').length,
+          medium: findings.filter((f) => f.severity === 'medium').length,
+          low: findings.filter((f) => f.severity === 'low').length,
+          info: findings.filter((f) => f.severity === 'info').length,
+        },
+      },
+      findings: findings.map((f) => ({
+        ruleId: f.ruleId,
+        category: f.category,
+        severity: f.severity,
+        title: f.title,
+        summary: f.summary,
+        explanation: f.explanation,
+        remediation: f.remediation,
+        evidence: f.evidence,
+        docsUrl: f.docsUrl,
+        fingerprint: f.fingerprint,
+      })),
+    };
+
+    let filename = `weblens-audit-${scan._id.toString().substring(0, 8)}.json`;
+    try {
+      const hostname = new URL(scan.finalUrl).hostname.replace(/[^a-z0-9]/gi, '_');
+      filename = `weblens-${hostname}-${scan._id.toString().substring(0, 8)}.json`;
+    } catch {}
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(JSON.stringify(exportPayload, null, 2));
+  } catch (error) {
+    console.error('[Export Scan Error]:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'EXPORT_FAILED', message: 'Could not export scan report' },
+    });
+  }
+}
+
+
 
