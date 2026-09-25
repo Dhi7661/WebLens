@@ -28,8 +28,7 @@ import {
   Globe,
   Sliders,
   LogIn,
-} from 'lucide-react';
-import { websiteApi, scanApi, WebsiteRecord, WebsiteHistoryData, ScanRecord } from '../lib/api';
+import { websiteApi, scanApi, type WebsiteRecord, type WebsiteHistoryData, type ScanRecord } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
 
 export function HistoryPage() {
