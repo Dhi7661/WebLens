@@ -1,11 +1,17 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
+export type MonitoringFrequency = 'hourly' | 'daily' | 'weekly';
+
 export interface IWebsite extends Document {
   ownerId: mongoose.Types.ObjectId;
   url: string;
   normalizedUrl: string;
   hostname: string;
   displayName: string;
+  monitoringEnabled: boolean;
+  frequency: MonitoringFrequency;
+  lastScheduledAt?: Date;
+  nextScheduledAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,6 +44,23 @@ const websiteSchema = new Schema<IWebsite>(
       type: String,
       required: true,
       trim: true,
+    },
+    monitoringEnabled: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    frequency: {
+      type: String,
+      enum: ['hourly', 'daily', 'weekly'],
+      default: 'daily',
+    },
+    lastScheduledAt: {
+      type: Date,
+    },
+    nextScheduledAt: {
+      type: Date,
+      index: true,
     },
   },
   {
