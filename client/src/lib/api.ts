@@ -120,6 +120,29 @@ export interface FindingRecord {
   createdAt: string;
 }
 
+export interface CompareResult {
+  baseScan: ScanRecord;
+  targetScan: ScanRecord;
+  deltas: {
+    overall: number;
+    categories: {
+      performance: number;
+      seo: number;
+      accessibility: number;
+      security: number;
+      technology: number;
+    };
+  };
+  counts: {
+    regressions: number;
+    resolved: number;
+    persistent: number;
+  };
+  regressions: FindingRecord[];
+  resolved: FindingRecord[];
+  persistent: FindingRecord[];
+}
+
 export const scanApi = {
   create: (url: string) => apiClient<{ scan: ScanRecord }>('/scans', {
     method: 'POST',
@@ -131,6 +154,8 @@ export const scanApi = {
   retry: (id: string) => apiClient<{ scan: ScanRecord }>(`/scans/${id}/retry`, {
     method: 'POST',
   }),
+  compare: (baseScanId: string, targetScanId: string) =>
+    apiClient<CompareResult>(`/scans/compare?baseScanId=${baseScanId}&targetScanId=${targetScanId}`),
 };
 
 
