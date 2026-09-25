@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
+import { ErrorBoundary } from '../common/ErrorBoundary';
 
 export function AppShell() {
   return (
@@ -8,7 +9,9 @@ export function AppShell() {
       <Navbar />
 
       <main className="flex-1 w-full">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
       <Footer />
     </div>

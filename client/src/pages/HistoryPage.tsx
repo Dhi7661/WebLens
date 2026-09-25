@@ -27,11 +27,14 @@ import {
   RefreshCw,
   Globe,
   Sliders,
+  LogIn,
 } from 'lucide-react';
 import { websiteApi, scanApi, WebsiteRecord, WebsiteHistoryData, ScanRecord } from '../lib/api';
+import { useAuth } from '../features/auth/AuthContext';
 
 export function HistoryPage() {
   const navigate = useNavigate();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedDomainParam = searchParams.get('websiteId');
 
@@ -48,19 +51,32 @@ export function HistoryPage() {
 
   // Load user websites
   useEffect(() => {
+    if (authLoading) return;
+
+    if (!isAuthenticated) {
+      setLoadingWebsites(false);
+      return;
+    }
+
     async function loadWebsites() {
       try {
         setLoadingWebsites(true);
         setError(null);
         const res = await websiteApi.list();
-        setWebsites(res.websites);
 
-        if (res.websites.length > 0) {
-          const matched = selectedDomainParam
-            ? res.websites.find((w) => w.id === selectedDomainParam)
-            : null;
-          const initialId = matched ? matched.id : res.websites[0].id;
-          setSelectedWebsiteId(initialId);
+        if (res.success && res.data?.websites) {
+          const list = res.data.websites;
+          setWebsites(list);
+
+          if (list.length > 0) {
+            const matched = selectedDomainParam
+              ? list.find((w) => w.id === selectedDomainParam)
+              : null;
+            const initialId = matched ? matched.id : list[0].id;
+            setSelectedWebsiteId(initialId);
+          }
+        } else {
+          setError(res.error?.message || 'Failed to load tracked websites.');
         }
       } catch (err: unknown) {
         const errorObj = err as Error;
@@ -70,18 +86,22 @@ export function HistoryPage() {
       }
     }
     loadWebsites();
-  }, [selectedDomainParam]);
+  }, [authLoading, isAuthenticated, selectedDomainParam]);
 
   // Load history whenever selected website changes
   useEffect(() => {
-    if (!selectedWebsiteId) return;
+    if (!selectedWebsiteId || !isAuthenticated) return;
 
     async function loadHistory() {
       try {
         setLoadingHistory(true);
         setError(null);
-        const data = await websiteApi.getHistory(selectedWebsiteId);
-        setHistoryData(data);
+        const res = await websiteApi.getHistory(selectedWebsiteId);
+        if (res.success && res.data) {
+          setHistoryData(res.data);
+        } else {
+          setError(res.error?.message || 'Failed to retrieve website audit history.');
+        }
       } catch (err: unknown) {
         const errorObj = err as Error;
         setError(errorObj.message || 'Failed to retrieve website audit history.');
@@ -91,7 +111,7 @@ export function HistoryPage() {
     }
 
     loadHistory();
-  }, [selectedWebsiteId]);
+  }, [selectedWebsiteId, isAuthenticated]);
 
   const handleSelectWebsite = (id: string) => {
     setSelectedWebsiteId(id);
@@ -108,26 +128,30 @@ export function HistoryPage() {
         nextState,
         historyData.website.frequency
       );
-      setHistoryData((prev) =>
-        prev
-          ? {
-              ...prev,
-              website: {
-                ...prev.website,
-                monitoringEnabled: res.website.monitoringEnabled,
-                nextScheduledAt: res.website.nextScheduledAt,
-              },
-            }
-          : null
-      );
-      // Also update in websites list
-      setWebsites((prev) =>
-        prev.map((w) =>
-          w.id === res.website.id
-            ? { ...w, monitoringEnabled: res.website.monitoringEnabled, nextScheduledAt: res.website.nextScheduledAt }
-            : w
-        )
-      );
+      if (res.success && res.data?.website) {
+        const updated = res.data.website;
+        setHistoryData((prev) =>
+          prev
+            ? {
+                ...prev,
+                website: {
+                  ...prev.website,
+                  monitoringEnabled: updated.monitoringEnabled,
+                  nextScheduledAt: updated.nextScheduledAt,
+                },
+              }
+            : null
+        );
+        setWebsites((prev) =>
+          prev.map((w) =>
+            w.id === updated.id
+              ? { ...w, monitoringEnabled: updated.monitoringEnabled, nextScheduledAt: updated.nextScheduledAt }
+              : w
+          )
+        );
+      } else {
+        alert(res.error?.message || 'Failed to update schedule');
+      }
     } catch (err: unknown) {
       const errorObj = err as Error;
       alert(`Failed to update schedule: ${errorObj.message}`);
@@ -145,25 +169,30 @@ export function HistoryPage() {
         historyData.website.monitoringEnabled,
         freq
       );
-      setHistoryData((prev) =>
-        prev
-          ? {
-              ...prev,
-              website: {
-                ...prev.website,
-                frequency: res.website.frequency,
-                nextScheduledAt: res.website.nextScheduledAt,
-              },
-            }
-          : null
-      );
-      setWebsites((prev) =>
-        prev.map((w) =>
-          w.id === res.website.id
-            ? { ...w, frequency: res.website.frequency, nextScheduledAt: res.website.nextScheduledAt }
-            : w
-        )
-      );
+      if (res.success && res.data?.website) {
+        const updated = res.data.website;
+        setHistoryData((prev) =>
+          prev
+            ? {
+                ...prev,
+                website: {
+                  ...prev.website,
+                  frequency: updated.frequency,
+                  nextScheduledAt: updated.nextScheduledAt,
+                },
+              }
+            : null
+        );
+        setWebsites((prev) =>
+          prev.map((w) =>
+            w.id === updated.id
+              ? { ...w, frequency: updated.frequency, nextScheduledAt: updated.nextScheduledAt }
+              : w
+          )
+        );
+      } else {
+        alert(res.error?.message || 'Failed to update frequency');
+      }
     } catch (err: unknown) {
       const errorObj = err as Error;
       alert(`Failed to update frequency: ${errorObj.message}`);
@@ -177,13 +206,41 @@ export function HistoryPage() {
     try {
       setTriggeringScan(true);
       const res = await websiteApi.triggerScan(selectedWebsiteId);
-      navigate(`/reports/${res.scan.id}`);
+      if (res.success && res.data?.scan) {
+        navigate(`/reports/${res.data.scan.id}`);
+      } else {
+        alert(res.error?.message || 'Failed to launch scan');
+        setTriggeringScan(false);
+      }
     } catch (err: unknown) {
       const errorObj = err as Error;
       alert(`Failed to launch scan: ${errorObj.message}`);
       setTriggeringScan(false);
     }
   };
+
+  // If user is not authenticated, show friendly login callout
+  if (!authLoading && !isAuthenticated) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6">
+        <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl w-16 h-16 mx-auto flex items-center justify-center text-indigo-400">
+          <History className="w-8 h-8" />
+        </div>
+        <h1 className="text-2xl font-bold text-slate-100">Sign in to Access Audit History</h1>
+        <p className="text-sm text-slate-400 max-w-md mx-auto">
+          Audit history and automated scheduled monitoring require an active WebLens account to persist and analyze historical metrics over time.
+        </p>
+        <div className="pt-2">
+          <Link to="/login?redirect=/history">
+            <Button variant="primary" size="md" className="gap-2">
+              <LogIn className="w-4 h-4" />
+              Sign In to Your Account
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const selectedWebsite = websites.find((w) => w.id === selectedWebsiteId);
   const timeSeries = historyData?.timeSeries || [];
@@ -216,7 +273,10 @@ export function HistoryPage() {
               onClick={() => {
                 if (selectedWebsiteId) {
                   setLoadingHistory(true);
-                  websiteApi.getHistory(selectedWebsiteId).then(setHistoryData).finally(() => setLoadingHistory(false));
+                  websiteApi.getHistory(selectedWebsiteId).then((res) => {
+                    if (res.success && res.data) setHistoryData(res.data);
+                    setLoadingHistory(false);
+                  });
                 }
               }}
               disabled={loadingHistory}
@@ -260,9 +320,9 @@ export function HistoryPage() {
             <Globe className="w-10 h-10 text-slate-600 mx-auto mb-3" />
             <p className="text-sm font-medium text-slate-300">No websites monitored yet</p>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Initiate a scan from the dashboard to register a domain for recurring scheduled audits and time-series analytics.
+              Initiate a scan from the analyze page to register a domain for recurring scheduled audits and time-series analytics.
             </p>
-            <Link to="/new-scan" className="inline-block mt-4">
+            <Link to="/analyze" className="inline-block mt-4">
               <Button variant="primary" size="sm">
                 Start First Scan
               </Button>
@@ -287,9 +347,9 @@ export function HistoryPage() {
                   {site.monitoringEnabled && (
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="Monitoring Active" />
                   )}
-                  {site.latestScan?.scores?.overall !== undefined && (
+                  {site.latestScan?.overallScore !== undefined && (
                     <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800/80 text-emerald-400">
-                      {site.latestScan.scores.overall}
+                      {site.latestScan.overallScore}
                     </span>
                   )}
                 </button>
@@ -494,10 +554,10 @@ export function HistoryPage() {
                     Overall: {activeHoverPoint.overallScore}
                   </span>
                   <div className="hidden sm:flex items-center gap-2 text-[10px] text-slate-400 border-l border-slate-800 pl-2">
-                    <span>P: {activeHoverPoint.categoryScores.performance}</span>
-                    <span>S: {activeHoverPoint.categoryScores.seo}</span>
-                    <span>A: {activeHoverPoint.categoryScores.accessibility}</span>
-                    <span>Sec: {activeHoverPoint.categoryScores.security}</span>
+                    <span>P: {activeHoverPoint.categoryScores?.performance ?? '—'}</span>
+                    <span>S: {activeHoverPoint.categoryScores?.seo ?? '—'}</span>
+                    <span>A: {activeHoverPoint.categoryScores?.accessibility ?? '—'}</span>
+                    <span>Sec: {activeHoverPoint.categoryScores?.security ?? '—'}</span>
                   </div>
                 </div>
               )}
@@ -522,10 +582,10 @@ export function HistoryPage() {
 
                   <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 px-1">
                     <span>
-                      Earliest: {new Date(timeSeries[0].date).toLocaleDateString()}
+                      Earliest: {timeSeries[0]?.date ? new Date(timeSeries[0].date).toLocaleDateString() : '—'}
                     </span>
                     <span>
-                      Latest: {new Date(timeSeries[timeSeries.length - 1].date).toLocaleDateString()}
+                      Latest: {timeSeries[timeSeries.length - 1]?.date ? new Date(timeSeries[timeSeries.length - 1].date).toLocaleDateString() : '—'}
                     </span>
                   </div>
                 </div>
@@ -574,15 +634,16 @@ export function HistoryPage() {
                     ) : (
                       historyData!.scans.map((scan: ScanRecord, idx: number) => {
                         const previousScan = historyData!.scans[idx + 1];
+                        const displayUrl = scan.requestedUrl || scan.finalUrl || selectedWebsite.url;
                         return (
                           <tr key={scan.id} className="hover:bg-slate-800/30 transition-colors">
                             <td className="py-3 px-5 font-semibold text-slate-100">
                               <div className="flex items-center gap-2">
-                                <span className="max-w-[220px] truncate" title={scan.url}>
-                                  {scan.url}
+                                <span className="max-w-[220px] truncate" title={displayUrl}>
+                                  {displayUrl}
                                 </span>
                                 <a
-                                  href={scan.url}
+                                  href={displayUrl}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="text-slate-500 hover:text-slate-300"
@@ -608,46 +669,46 @@ export function HistoryPage() {
                               </div>
                             </td>
                             <td className="py-3 px-4 text-center font-mono font-bold">
-                              {scan.scores?.overall !== undefined ? (
+                              {scan.overallScore !== undefined ? (
                                 <span
                                   className={`px-2 py-0.5 rounded text-xs ${
-                                    scan.scores.overall >= 90
+                                    scan.overallScore >= 90
                                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                      : scan.scores.overall >= 70
+                                      : scan.overallScore >= 70
                                       ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                                       : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                                   }`}
                                 >
-                                  {scan.scores.overall}
+                                  {scan.overallScore}
                                 </span>
                               ) : (
                                 <span className="text-slate-500 text-xs">—</span>
                               )}
                             </td>
                             <td className="py-3 px-4 text-center font-mono text-xs hidden md:table-cell text-slate-400">
-                              {scan.scores?.performance ?? '—'}
+                              {scan.categoryScores?.performance ?? '—'}
                             </td>
                             <td className="py-3 px-4 text-center font-mono text-xs hidden md:table-cell text-slate-400">
-                              {scan.scores?.seo ?? '—'}
+                              {scan.categoryScores?.seo ?? '—'}
                             </td>
                             <td className="py-3 px-4 text-center font-mono text-xs hidden md:table-cell text-slate-400">
-                              {scan.scores?.accessibility ?? '—'}
+                              {scan.categoryScores?.accessibility ?? '—'}
                             </td>
                             <td className="py-3 px-4 text-center font-mono text-xs hidden md:table-cell text-slate-400">
-                              {scan.scores?.security ?? '—'}
+                              {scan.categoryScores?.security ?? '—'}
                             </td>
                             <td className="py-3 px-4 text-center">
                               <Badge
                                 variant={
-                                  scan.status === 'completed'
+                                  scan.status === 'COMPLETED'
                                     ? 'success'
-                                    : scan.status === 'failed'
+                                    : scan.status === 'FAILED'
                                     ? 'destructive'
                                     : 'secondary'
                                 }
                                 size="sm"
                               >
-                                {scan.status}
+                                {scan.status.toLowerCase()}
                               </Badge>
                             </td>
                             <td className="py-3 px-5 text-right">
