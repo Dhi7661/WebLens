@@ -29,11 +29,14 @@ app.get('/api/health', (_req: Request, res: Response) => {
 
 // Authentication routes
 import { authRouter } from './modules/auth/auth.routes.js';
+import { scanRouter } from './modules/scans/scan.routes.js';
 import { requireAuth } from './middleware/auth.js';
 import { getCurrentUser } from './modules/auth/auth.controller.js';
 
 app.use('/api/auth', authRouter);
 app.get('/api/me', requireAuth, getCurrentUser);
+app.use('/api/scans', scanRouter);
+
 
 
 // 404 Handler
