@@ -131,15 +131,15 @@ export function LandingPage() {
           <span>WebLens 1.0 • Full-Stack Website Intelligence Platform</span>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto leading-[1.15] text-slate-100 mb-6">
+        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto leading-[1.15] text-slate-900 dark:text-slate-100 mb-6">
           Understand what is happening{' '}
-          <span className="bg-gradient-to-r from-indigo-400 via-cyan-400 to-teal-300 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-indigo-500 via-cyan-500 to-teal-400 bg-clip-text text-transparent">
             under the hood
           </span>{' '}
           of your website.
         </h1>
 
-        <p className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
           Convert technical observations into understandable issues, explain why they matter,
           provide immediate code fixes, track health over time, and ask an AI copilot grounded in scan evidence.
         </p>
@@ -147,7 +147,7 @@ export function LandingPage() {
         {/* Scan Input Bar */}
         <form
           onSubmit={handleQuickScan}
-          className="max-w-2xl mx-auto bg-slate-900/80 p-2 rounded-2xl border border-slate-700/80 shadow-2xl shadow-indigo-950/40 backdrop-blur-lg flex flex-col sm:flex-row items-center gap-2"
+          className="max-w-2xl mx-auto bg-white/90 dark:bg-slate-900/80 p-2 rounded-2xl border border-slate-300 dark:border-slate-700/80 shadow-2xl shadow-indigo-950/20 dark:shadow-indigo-950/40 backdrop-blur-lg flex flex-col sm:flex-row items-center gap-2"
         >
           <div className="w-full relative flex-1">
             <Input
@@ -159,7 +159,7 @@ export function LandingPage() {
                 setUrlError('');
               }}
               error={urlError}
-              leftIcon={<Compass className="w-5 h-5 text-indigo-400" />}
+              leftIcon={<Compass className="w-5 h-5 text-indigo-500" />}
               className="bg-transparent border-0 focus:ring-0 text-base"
             />
           </div>
@@ -174,9 +174,9 @@ export function LandingPage() {
           </Button>
         </form>
 
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-400">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400">
           <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> No signup required for quick test
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> No signup required for quick test
           </span>
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" /> SSRF Protected

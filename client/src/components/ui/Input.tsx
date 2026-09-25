@@ -31,7 +31,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs font-semibold tracking-wide text-slate-300 select-none"
+            className="text-xs font-semibold tracking-wide text-slate-700 dark:text-slate-300 select-none"
           >
             {label}
           </label>
@@ -39,7 +39,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
         <div className="relative flex items-center">
           {leftIcon && (
-            <div className="absolute left-3.5 text-slate-400 pointer-events-none flex items-center">
+            <div className="absolute left-3.5 text-slate-400 dark:text-slate-500 pointer-events-none flex items-center">
               {leftIcon}
             </div>
           )}
@@ -49,7 +49,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             disabled={disabled}
             className={cn(
-              'w-full rounded-lg bg-slate-900/90 text-slate-100 placeholder-slate-500 border border-slate-700/80 px-3.5 py-2.5 text-sm transition-all',
+              'w-full rounded-lg bg-white dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-300 dark:border-slate-700/80 px-3.5 py-2.5 text-sm transition-all shadow-xs',
               'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
               'disabled:opacity-50 disabled:cursor-not-allowed',
               leftIcon && 'pl-10',

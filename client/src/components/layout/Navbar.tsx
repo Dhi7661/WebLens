@@ -24,7 +24,7 @@ export function Navbar() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full border-b border-[var(--nav-border)] bg-[var(--nav-bg)] backdrop-blur-md transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand / Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
@@ -32,10 +32,10 @@ export function Navbar() {
             <ScanSearch className="w-5 h-5 text-white" />
           </div>
           <div className="flex flex-col text-left">
-            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
               WebLens
             </span>
-            <span className="text-[10px] text-slate-400 font-mono -mt-1 tracking-wider uppercase">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono -mt-1 tracking-wider uppercase">
               Intelligence
             </span>
           </div>
@@ -52,8 +52,8 @@ export function Navbar() {
                 to={item.path}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   isActive
-                    ? 'bg-slate-800 text-indigo-400'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'bg-slate-200/80 text-indigo-700 dark:bg-slate-800 dark:text-indigo-400'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/50'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -69,10 +69,10 @@ export function Navbar() {
           <button
             type="button"
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors cursor-pointer"
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
             title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
           >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-600" />}
           </button>
 
           {/* GitHub Link */}
@@ -80,7 +80,7 @@ export function Navbar() {
             href="https://github.com/Dhi7661/WebLens"
             target="_blank"
             rel="noreferrer"
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors"
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
             title="WebLens GitHub Repository"
           >
             <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
