@@ -1,9 +1,18 @@
 import mongoose from 'mongoose';
+import dns from 'node:dns';
+
+// Fix for Windows / ISP DNS causing querySrv ECONNREFUSED in Node c-ares
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+} catch (e) {
+  console.warn('[WebLens DB] Could not override DNS servers:', e);
+}
 
 /**
  * Manages the MongoDB database connection lifecycle with graceful reconnects.
  */
 export async function connectDatabase(): Promise<void> {
+
   const uri = process.env.MONGODB_URI;
 
   if (!uri) {
