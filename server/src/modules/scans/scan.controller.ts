@@ -226,3 +226,114 @@ export async function getScanReport(req: Request, res: Response): Promise<void> 
   }
 }
 
+/**
+ * Compares two completed scans, computing score deltas and identifying
+ * regressions, resolved issues, and persistent debt using SHA-256 fingerprints (Spec Section 8).
+ */
+export async function compareScans(req: Request, res: Response): Promise<void> {
+  const { baseScanId, targetScanId } = req.query;
+  const userId = req.user?.userId;
+
+  if (!baseScanId || !targetScanId || typeof baseScanId !== 'string' || typeof targetScanId !== 'string') {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'MISSING_SCAN_IDS',
+        message: 'Both baseScanId and targetScanId query parameters are required for comparison.',
+      },
+    });
+    return;
+  }
+
+  try {
+    const [baseScan, targetScan] = await Promise.all([
+      Scan.findById(baseScanId),
+      Scan.findById(targetScanId),
+    ]);
+
+    if (!baseScan || !targetScan) {
+      res.status(404).json({
+        success: false,
+        error: {
+          code: 'SCAN_NOT_FOUND',
+          message: 'One or both scan records could not be found.',
+        },
+      });
+      return;
+    }
+
+    // Ownership check (Section 12: Every scan/report endpoint must verify resource ownership)
+    if (baseScan.ownerId.toString() !== userId || targetScan.ownerId.toString() !== userId) {
+      res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You do not have access to compare these scans.',
+        },
+      });
+      return;
+    }
+
+    const { Finding } = await import('../findings/finding.model.js');
+    const [baseFindings, targetFindings] = await Promise.all([
+      Finding.find({ scanId: baseScan._id }),
+      Finding.find({ scanId: targetScan._id }),
+    ]);
+
+    const baseFingerprintMap = new Map(baseFindings.map((f) => [f.fingerprint, f]));
+    const targetFingerprintMap = new Map(targetFindings.map((f) => [f.fingerprint, f]));
+
+    // 1. Regressions: New issues appearing in targetScan not found in baseScan
+    const regressions = targetFindings
+      .filter((f) => !baseFingerprintMap.has(f.fingerprint))
+      .map((f) => f.toJSON());
+
+    // 2. Resolved: Issues fixed in targetScan that previously existed in baseScan
+    const resolved = baseFindings
+      .filter((f) => !targetFingerprintMap.has(f.fingerprint))
+      .map((f) => f.toJSON());
+
+    // 3. Persistent: Issues recurring across both scans
+    const persistent = targetFindings
+      .filter((f) => baseFingerprintMap.has(f.fingerprint))
+      .map((f) => f.toJSON());
+
+    // Score deltas
+    const overallDelta = targetScan.overallScore - baseScan.overallScore;
+    const categoryDeltas = {
+      performance: targetScan.categoryScores.performance - baseScan.categoryScores.performance,
+      seo: targetScan.categoryScores.seo - baseScan.categoryScores.seo,
+      accessibility: targetScan.categoryScores.accessibility - baseScan.categoryScores.accessibility,
+      security: targetScan.categoryScores.security - baseScan.categoryScores.security,
+      technology: targetScan.categoryScores.technology - baseScan.categoryScores.technology,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        baseScan: baseScan.toJSON(),
+        targetScan: targetScan.toJSON(),
+        deltas: {
+          overall: overallDelta,
+          categories: categoryDeltas,
+        },
+        counts: {
+          regressions: regressions.length,
+          resolved: resolved.length,
+          persistent: persistent.length,
+        },
+        regressions,
+        resolved,
+        persistent,
+      },
+    });
+  } catch (error) {
+    console.error('[Compare Scans Error]:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'COMPARISON_FAILED', message: 'Could not complete scan comparison' },
+    });
+  }
+}
+
+
