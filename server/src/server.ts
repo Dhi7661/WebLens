@@ -10,11 +10,13 @@ try {
 
 import { app } from './app.js';
 import { connectDatabase } from './db/connection.js';
+import { scheduler } from './jobs/scheduler.js';
 
 const PORT = process.env.PORT || 5000;
 
 async function bootstrap() {
   await connectDatabase();
+  scheduler.start();
   app.listen(PORT, () => {
     console.log(`[WebLens Server] Running on http://localhost:${PORT}`);
     console.log(`[WebLens Server] Health check available at http://localhost:${PORT}/api/health`);

@@ -183,4 +183,64 @@ export const scanApi = {
     ),
 };
 
+export interface WebsiteRecord {
+  id: string;
+  ownerId: string;
+  url: string;
+  normalizedUrl: string;
+  hostname: string;
+  displayName: string;
+  monitoringEnabled: boolean;
+  frequency: 'hourly' | 'daily' | 'weekly';
+  lastScheduledAt?: string;
+  nextScheduledAt?: string;
+  scanCount?: number;
+  latestScan?: ScanRecord | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WebsiteHistoryData {
+  website: WebsiteRecord;
+  stats: {
+    totalScans: number;
+    completedScans: number;
+    averageScore: number;
+    scoreDelta: number;
+  };
+  timeSeries: Array<{
+    id: string;
+    date: string;
+    overallScore: number;
+    categoryScores: {
+      performance: number;
+      seo: number;
+      accessibility: number;
+      security: number;
+      technology: number;
+    };
+    durationMs: number;
+  }>;
+  scans: ScanRecord[];
+}
+
+export const websiteApi = {
+  list: () => apiClient<{ websites: WebsiteRecord[] }>('/websites'),
+  updateMonitoring: (
+    id: string,
+    monitoringEnabled: boolean,
+    frequency?: 'hourly' | 'daily' | 'weekly'
+  ) =>
+    apiClient<{ website: WebsiteRecord }>(`/websites/${id}/monitoring`, {
+      method: 'PATCH',
+      body: JSON.stringify({ monitoringEnabled, frequency }),
+    }),
+  getHistory: (id: string) => apiClient<WebsiteHistoryData>(`/websites/${id}/history`),
+  triggerScan: (id: string) =>
+    apiClient<{ scan: ScanRecord }>(`/websites/${id}/scan`, {
+      method: 'POST',
+    }),
+};
+
+
 
