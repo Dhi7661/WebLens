@@ -18,11 +18,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+import mongoose from 'mongoose';
+import { lastDbError } from './db/connection.js';
+
 // Basic health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {
+  const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
   res.status(200).json({
     status: 'ok',
     service: 'weblens-api',
+    dbState: states[mongoose.connection.readyState] || 'unknown',
+    lastDbError,
     timestamp: new Date().toISOString(),
   });
 });
