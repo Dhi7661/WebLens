@@ -84,17 +84,19 @@ class ScanJobQueue {
       console.log(`  - Images: ${pageContext.images.length}, Headings: ${pageContext.headings.length}, Scripts: ${pageContext.scripts.length}`);
       console.log(`  - Total Transferred: ${Math.round(pageContext.resourceSummary.totalBytes / 1024)} KB`);
 
-      // 3. Run SEO, Accessibility, Security & Performance Analyzers
+      // 3. Run all 5 Analyzer Engines: SEO, Accessibility, Security, Performance & Technology
       const { seoAnalyzer } = await import('../analyzers/seo/seoAnalyzer.js');
       const { accessibilityAnalyzer } = await import('../analyzers/accessibility/accessibilityAnalyzer.js');
       const { securityAnalyzer } = await import('../analyzers/security/securityAnalyzer.js');
       const { performanceAnalyzer } = await import('../analyzers/performance/performanceAnalyzer.js');
+      const { technologyAnalyzer } = await import('../analyzers/technology/technologyAnalyzer.js');
       const { Finding } = await import('../modules/findings/finding.model.js');
 
       const seoResult = seoAnalyzer.analyze(pageContext);
       const a11yResult = accessibilityAnalyzer.analyze(pageContext);
       const secResult = securityAnalyzer.analyze(pageContext);
       const perfResult = performanceAnalyzer.analyze(pageContext);
+      const techResult = technologyAnalyzer.analyze(pageContext);
 
       // Collect all findings from all active analyzers
       const allFindings = [
@@ -102,6 +104,7 @@ class ScanJobQueue {
         ...a11yResult.findings,
         ...secResult.findings,
         ...perfResult.findings,
+        ...techResult.findings,
       ];
 
       // Persist findings to database
@@ -112,7 +115,7 @@ class ScanJobQueue {
         }));
         await Finding.insertMany(findingDocs);
         console.log(
-          `[ScanWorker] Persisted ${findingDocs.length} findings (${seoResult.findings.length} SEO, ${a11yResult.findings.length} A11y, ${secResult.findings.length} Security, ${perfResult.findings.length} Performance) for scan ${job.scanId}`
+          `[ScanWorker] Persisted ${findingDocs.length} findings (${seoResult.findings.length} SEO, ${a11yResult.findings.length} A11y, ${secResult.findings.length} Security, ${perfResult.findings.length} Performance, ${techResult.findings.length} Tech) for scan ${job.scanId}`
         );
       }
 
@@ -121,13 +124,13 @@ class ScanJobQueue {
       const a11yScore = a11yResult.score;
       const secScore = secResult.score;
       const perfScore = perfResult.score;
-      const techScore = 90;
+      const techScore = techResult.score;
 
       const overallScore = Math.round(
         perfScore * 0.25 + seoScore * 0.2 + a11yScore * 0.25 + secScore * 0.15 + techScore * 0.15
       );
 
-      // 4. Mark as COMPLETED with captured data, real SEO, Accessibility, Security, and Performance findings
+      // 4. Mark as COMPLETED with captured data and all category scores
       await Scan.findByIdAndUpdate(job.scanId, {
         status: 'COMPLETED',
         finalUrl: pageContext.finalUrl,
@@ -144,7 +147,7 @@ class ScanJobQueue {
       });
 
       console.log(
-        `[ScanWorker] Completed scan ${job.scanId} (Perf: ${perfScore}/100, SEO: ${seoScore}/100, A11y: ${a11yScore}/100, Sec: ${secScore}/100, Overall: ${overallScore}/100) in ${durationMs}ms`
+        `[ScanWorker] Completed scan ${job.scanId} (Perf: ${perfScore}/100, SEO: ${seoScore}/100, A11y: ${a11yScore}/100, Sec: ${secScore}/100, Tech: ${techScore}/100, Overall: ${overallScore}/100) in ${durationMs}ms`
       );
     } catch (scanErr) {
       console.error(`[ScanWorker] Failed during browser extraction for ${job.scanId}:`, scanErr);
