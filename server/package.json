@@ -8,7 +8,13 @@
     "build": "tsc",
     "start": "node dist/server.js"
   },
-  "keywords": ["weblens", "website-audit", "seo", "security", "accessibility"],
+  "keywords": [
+    "weblens",
+    "website-audit",
+    "seo",
+    "security",
+    "accessibility"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -19,6 +25,7 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.5",
+    "puppeteer": "^25.12.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
