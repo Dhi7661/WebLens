@@ -78,3 +78,40 @@ export async function apiClient<T = any>(
     };
   }
 }
+
+export interface ScanRecord {
+  id: string;
+  websiteId: string;
+  ownerId: string;
+  requestedUrl: string;
+  finalUrl: string;
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  overallScore: number;
+  categoryScores: {
+    performance: number;
+    seo: number;
+    accessibility: number;
+    security: number;
+    technology: number;
+  };
+  startedAt?: string;
+  completedAt?: string;
+  durationMs?: number;
+  errorCode?: string;
+  errorMessage?: string;
+  analyzerVersion: string;
+  createdAt: string;
+}
+
+export const scanApi = {
+  create: (url: string) => apiClient<{ scan: ScanRecord }>('/scans', {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  }),
+  getStatus: (id: string) => apiClient<{ scan: ScanRecord }>(`/scans/${id}`),
+  list: () => apiClient<{ scans: ScanRecord[] }>('/scans'),
+  retry: (id: string) => apiClient<{ scan: ScanRecord }>(`/scans/${id}/retry`, {
+    method: 'POST',
+  }),
+};
+
