@@ -10,6 +10,7 @@ import {
   revokeShareScan,
   getSharedScanReport,
   exportScanJson,
+  chatWithCopilot,
 } from './scan.controller.js';
 import { requireAuth } from '../../middleware/auth.js';
 
@@ -24,6 +25,14 @@ scanRouter.get('/:id/export/json', (req, res) => {
     return exportScanJson(req, res);
   }
   requireAuth(req, res, () => exportScanJson(req, res));
+});
+
+// Dual-mode grounded AI copilot chat endpoint
+scanRouter.post('/:id/chat', (req, res) => {
+  if (req.query.token) {
+    return chatWithCopilot(req, res);
+  }
+  requireAuth(req, res, () => chatWithCopilot(req, res));
 });
 
 // All subsequent endpoints require authenticated ownership

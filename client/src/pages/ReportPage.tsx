@@ -57,10 +57,11 @@ export function ReportPage({ isPublicView = false }: ReportPageProps) {
 
   // AI Copilot States
   const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiSending, setIsAiSending] = useState(false);
   const [aiChat, setAiChat] = useState<Array<{ sender: 'user' | 'ai'; text: string }>>([
     {
       sender: 'ai',
-      text: 'Hello! I am your WebLens Assistant, strictly grounded in the audit findings for this scan. Ask me why a score was assigned or how to implement a fix!',
+      text: 'Hello! I am your WebLens Assistant, strictly grounded in the audit findings for this scan. Ask me why a score was assigned, how to fix an issue, or what to prioritize!',
     },
   ]);
 
@@ -163,26 +164,42 @@ export function ReportPage({ isPublicView = false }: ReportPageProps) {
     window.print();
   };
 
-  const handleSendAi = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!aiPrompt.trim()) return;
+  const handleSendAi = async (e?: React.FormEvent, customPrompt?: string) => {
+    if (e) e.preventDefault();
+    const promptToSend = (customPrompt || aiPrompt).trim();
+    if (!promptToSend || !scan?.id || isAiSending) return;
 
-    const userMsg = aiPrompt.trim();
     setAiPrompt('');
-    setAiChat((prev) => [...prev, { sender: 'user', text: userMsg }]);
+    setAiChat((prev) => [...prev, { sender: 'user', text: promptToSend }]);
+    setIsAiSending(true);
 
-    setTimeout(() => {
-      let reply = `Based on the scan evidence for ${targetUrl}: You have ${findings.length} findings across 5 categories. Composite score: ${overallScore}/100. Select a category tab to view exact rule remediations.`;
-      const lower = userMsg.toLowerCase();
-      if (lower.includes('seo') || lower.includes('title')) {
-        reply = `SEO Analysis: Review your heading hierarchy (H1..H6) and meta descriptions. Missing canonical links or short titles directly reduce organic reach.`;
-      } else if (lower.includes('security') || lower.includes('csp') || lower.includes('https')) {
-        reply = `Security Analysis: Ensure HSTS is configured with max-age >= 31536000 and implement a restrictive Content-Security-Policy (default-src 'self') to defend against XSS and data injection.`;
-      } else if (lower.includes('performance') || lower.includes('speed') || lower.includes('script')) {
-        reply = `Performance Analysis: Defer or async any render-blocking scripts in your <head> and add explicit width/height dimensions on images to eliminate Cumulative Layout Shift (CLS).`;
+    try {
+      const res = await scanApi.chatWithCopilot(
+        scan.id,
+        promptToSend,
+        aiChat,
+        currentShareToken || undefined
+      );
+
+      if (res.success && res.data?.reply) {
+        setAiChat((prev) => [...prev, { sender: 'ai', text: res.data!.reply }]);
+      } else {
+        setAiChat((prev) => [
+          ...prev,
+          {
+            sender: 'ai',
+            text: res.error?.message || 'Could not process AI query. Please try again.',
+          },
+        ]);
       }
-      setAiChat((prev) => [...prev, { sender: 'ai', text: reply }]);
-    }, 600);
+    } catch {
+      setAiChat((prev) => [
+        ...prev,
+        { sender: 'ai', text: 'Connection error while communicating with WebLens Copilot.' },
+      ]);
+    } finally {
+      setIsAiSending(false);
+    }
   };
 
   if (isLoading) {
@@ -581,7 +598,7 @@ export function ReportPage({ isPublicView = false }: ReportPageProps) {
                   className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[85%] p-3 rounded-xl leading-relaxed ${
+                    className={`max-w-[85%] p-3 rounded-xl leading-relaxed whitespace-pre-wrap ${
                       msg.sender === 'user'
                         ? 'bg-indigo-600 text-white rounded-br-none'
                         : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none shadow-sm'
@@ -591,23 +608,42 @@ export function ReportPage({ isPublicView = false }: ReportPageProps) {
                   </div>
                 </div>
               ))}
+
+              {isAiSending && (
+                <div className="flex justify-start">
+                  <div className="bg-slate-900 border border-slate-800 text-slate-400 p-3 rounded-xl rounded-bl-none text-xs flex items-center gap-2 shadow-sm">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-spin" />
+                    <span>Analyzing audit findings & evidence...</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Prompt presets */}
             <div className="p-2 border-t border-slate-800 bg-slate-900/50 flex flex-wrap gap-1.5">
               <button
                 type="button"
-                onClick={() => setAiPrompt('What should I fix first to improve my score?')}
-                className="text-[10px] bg-slate-800 text-indigo-300 hover:bg-slate-700 px-2 py-1 rounded cursor-pointer"
+                disabled={isAiSending}
+                onClick={() => handleSendAi(undefined, 'What should I fix first to improve my score?')}
+                className="text-[10px] bg-slate-800 text-indigo-300 hover:bg-slate-700 px-2 py-1 rounded cursor-pointer transition-colors disabled:opacity-50"
               >
                 What should I fix first?
               </button>
               <button
                 type="button"
-                onClick={() => setAiPrompt('Explain how to fix the missing alt text')}
-                className="text-[10px] bg-slate-800 text-indigo-300 hover:bg-slate-700 px-2 py-1 rounded cursor-pointer"
+                disabled={isAiSending}
+                onClick={() => handleSendAi(undefined, 'How do I fix the missing security headers?')}
+                className="text-[10px] bg-slate-800 text-indigo-300 hover:bg-slate-700 px-2 py-1 rounded cursor-pointer transition-colors disabled:opacity-50"
               >
-                Explain alt text fix
+                Fix security headers
+              </button>
+              <button
+                type="button"
+                disabled={isAiSending}
+                onClick={() => handleSendAi(undefined, 'How is my composite score calculated?')}
+                className="text-[10px] bg-slate-800 text-indigo-300 hover:bg-slate-700 px-2 py-1 rounded cursor-pointer transition-colors disabled:opacity-50"
+              >
+                Score formula
               </button>
             </div>
 
@@ -615,12 +651,13 @@ export function ReportPage({ isPublicView = false }: ReportPageProps) {
             <CardContent className="p-3 border-t border-slate-800">
               <form onSubmit={handleSendAi} className="flex items-center gap-2">
                 <Input
-                  placeholder="Ask a question about this report..."
+                  placeholder={isAiSending ? 'Copilot is generating answer...' : 'Ask a question about this audit...'}
                   value={aiPrompt}
+                  disabled={isAiSending}
                   onChange={(e) => setAiPrompt(e.target.value)}
                   className="bg-slate-900 text-xs py-2"
                 />
-                <Button type="submit" variant="primary" size="sm" className="shrink-0">
+                <Button type="submit" variant="primary" size="sm" className="shrink-0" disabled={isAiSending || !aiPrompt.trim()}>
                   <Send className="w-3.5 h-3.5" />
                 </Button>
               </form>
