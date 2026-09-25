@@ -1,0 +1,16 @@
+{
+  "name": "weblens-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WebLens - Website Intelligence & Quality Analysis Platform",
+  "scripts": {
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "build:client": "npm run build --prefix client",
+    "build:server": "npm run build --prefix server",
+    "install:all": "npm install --prefix client && npm install --prefix server"
+  },
+  "keywords": ["website-intelligence", "fullstack", "react", "express", "audit"],
+  "author": "",
+  "license": "ISC"
+}
