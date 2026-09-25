@@ -184,3 +184,45 @@ export async function retryScan(req: Request, res: Response): Promise<void> {
     });
   }
 }
+
+export async function getScanReport(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const userId = req.user?.userId;
+
+  try {
+    const scan = await Scan.findById(id);
+    if (!scan) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'SCAN_NOT_FOUND', message: 'Scan not found' },
+      });
+      return;
+    }
+
+    if (scan.ownerId.toString() !== userId) {
+      res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'You do not have access to this scan report' },
+      });
+      return;
+    }
+
+    const { Finding } = await import('../findings/finding.model.js');
+    const findings = await Finding.find({ scanId: scan._id }).sort({ createdAt: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        scan: scan.toJSON(),
+        findings: findings.map((f) => f.toJSON()),
+      },
+    });
+  } catch (error) {
+    console.error('[Get Scan Report Error]:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'FETCH_REPORT_FAILED', message: 'Failed to retrieve scan report' },
+    });
+  }
+}
+

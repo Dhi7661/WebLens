@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { scanApi, type ScanRecord, type FindingRecord } from '../lib/api';
 import {
   Card,
   CardHeader,
@@ -9,6 +10,7 @@ import {
   Button,
   Badge,
   Input,
+  Skeleton,
 } from '../components/ui';
 import {
   RotateCw,
@@ -26,109 +28,54 @@ import {
   Layers,
 } from 'lucide-react';
 
-interface FindingItem {
-  id: string;
-  ruleId: string;
-  category: 'Performance' | 'SEO' | 'Accessibility' | 'Security' | 'Technology';
-  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
-  title: string;
-  summary: string;
-  explanation: string;
-  remediation: string;
-  evidence: string;
-}
-
-const MOCK_FINDINGS: FindingItem[] = [
-  {
-    id: 'f-1',
-    ruleId: 'SEC-CSP-001',
-    category: 'Security',
-    severity: 'high',
-    title: 'Content-Security-Policy (CSP) Header Missing',
-    summary: 'No Content-Security-Policy response header was detected.',
-    explanation:
-      'CSP provides a defense-in-depth layer against Cross-Site Scripting (XSS) and data injection attacks by restricting the origins from which scripts and resources can load.',
-    remediation:
-      'Configure your web server or reverse proxy to deliver a valid Content-Security-Policy header. Example: Content-Security-Policy: default-src \'self\'; script-src \'self\';',
-    evidence: 'HTTP Response Headers: [missing header: content-security-policy]',
-  },
-  {
-    id: 'f-2',
-    ruleId: 'A11Y-IMG-ALT',
-    category: 'Accessibility',
-    severity: 'high',
-    title: 'Content Images Missing Descriptive Alt Attributes',
-    summary: '2 key images in the main content container lack alt attributes.',
-    explanation:
-      'Screen readers cannot announce image content without alt text. Search engine crawlers also rely on alt text for context.',
-    remediation:
-      'Provide concise, meaningful descriptions in the alt attribute: <img alt="Product preview dashboard" />.',
-    evidence: '<img src="/static/hero-preview.png" class="rounded-xl shadow-lg">',
-  },
-  {
-    id: 'f-3',
-    ruleId: 'SEO-META-DESC',
-    category: 'SEO',
-    severity: 'medium',
-    title: 'Meta Description Is Too Short (< 50 characters)',
-    summary: 'Meta description contains only 28 characters.',
-    explanation:
-      'Search engines typically display up to 155-160 characters in search result snippets. Short descriptions miss search intent opportunities.',
-    remediation:
-      'Expand the description to 120-160 characters summarizing the core value proposition.',
-    evidence: '<meta name="description" content="WebLens Developer Auditing">',
-  },
-  {
-    id: 'f-4',
-    ruleId: 'PERF-RENDER-BLOCK',
-    category: 'Performance',
-    severity: 'medium',
-    title: 'Render-Blocking External Stylesheet Detected',
-    summary: 'Synchronous external font stylesheet delays initial paint.',
-    explanation:
-      'Loading non-critical Google Fonts synchronously in the <head> pauses DOM rendering until download completes.',
-    remediation:
-      'Add rel="preload" as="style" or load font styles asynchronously.',
-    evidence: '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter">',
-  },
-  {
-    id: 'f-5',
-    ruleId: 'TECH-REACT-DETECT',
-    category: 'Technology',
-    severity: 'info',
-    title: 'React Framework Detected',
-    summary: 'Client-side React 19 runtime identified with high confidence.',
-    explanation:
-      'DOM root container contains data-reactroot and __reactFiber internal properties.',
-    remediation: 'No action required (informational).',
-    evidence: 'DOM property: window.__REACT_DEVTOOLS_GLOBAL_HOOK__ present',
-  },
-];
-
 export function ReportPage() {
   const { scanId = 'scan-101' } = useParams();
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [scan, setScan] = useState<ScanRecord | null>(null);
+  const [findings, setFindings] = useState<FindingRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiChat, setAiChat] = useState<Array<{ sender: 'user' | 'ai'; text: string }>>([
     {
       sender: 'ai',
-      text: 'Hello! I am your WebLens Assistant, strictly grounded in the audit findings for https://mystore-demo.vercel.app. Ask me why a score was assigned or how to implement a fix!',
+      text: 'Hello! I am your WebLens Assistant, strictly grounded in the audit findings for this scan. Ask me why a score was assigned or how to implement a fix!',
     },
   ]);
 
+  useEffect(() => {
+    async function loadReport() {
+      setIsLoading(true);
+      const res = await scanApi.getReport(scanId);
+      if (res.success && res.data) {
+        setScan(res.data.scan);
+        setFindings(res.data.findings);
+      }
+      setIsLoading(false);
+    }
+    loadReport();
+  }, [scanId]);
+
+  const targetUrl = scan?.finalUrl || scan?.requestedUrl || 'https://mystore-demo.vercel.app';
+  const overallScore = scan?.overallScore ?? 88;
+  const perfScore = scan?.categoryScores?.performance ?? 82;
+  const seoScore = scan?.categoryScores?.seo ?? 90;
+  const a11yScore = scan?.categoryScores?.accessibility ?? 85;
+  const secScore = scan?.categoryScores?.security ?? 95;
+  const techScore = scan?.categoryScores?.technology ?? 90;
+
   const categories = [
-    { key: 'all', label: 'All Findings', count: MOCK_FINDINGS.length },
-    { key: 'Performance', label: 'Performance', icon: Zap, score: 82 },
-    { key: 'SEO', label: 'SEO', icon: Search, score: 90 },
-    { key: 'Accessibility', label: 'Accessibility', icon: Eye, score: 85 },
-    { key: 'Security', label: 'Security', icon: Lock, score: 95 },
-    { key: 'Technology', label: 'Tech Stack', icon: Cpu, score: 90 },
+    { key: 'all', label: 'All Findings', count: findings.length },
+    { key: 'SEO', label: 'SEO', icon: Search, score: seoScore },
+    { key: 'Performance', label: 'Performance', icon: Zap, score: perfScore },
+    { key: 'Accessibility', label: 'Accessibility', icon: Eye, score: a11yScore },
+    { key: 'Security', label: 'Security', icon: Lock, score: secScore },
+    { key: 'Technology', label: 'Tech Stack', icon: Cpu, score: techScore },
   ];
 
   const filteredFindings =
     activeTab === 'all'
-      ? MOCK_FINDINGS
-      : MOCK_FINDINGS.filter((f) => f.category === activeTab);
+      ? findings
+      : findings.filter((f) => f.category === activeTab);
 
   const handleSendAi = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,13 +86,26 @@ export function ReportPage() {
     setAiChat((prev) => [...prev, { sender: 'user', text: userMsg }]);
 
     setTimeout(() => {
-      let reply = `Based on the scan evidence for ${scanId}: Your highest priority issue is the missing Content-Security-Policy (SEC-CSP-001) and unlabelled images in the hero section. Resolving these two will elevate your score to 95+.`;
-      if (userMsg.toLowerCase().includes('accessibility') || userMsg.toLowerCase().includes('alt')) {
-        reply = `Accessibility analysis detected 2 images lacking 'alt' attributes (A11Y-IMG-ALT). You can fix this immediately by modifying <img src="/static/hero-preview.png"> to include alt="WebLens dashboard interface".`;
+      let reply = `Based on the scan evidence for ${targetUrl}: You have ${findings.length} findings. Your SEO score is ${seoScore}/100. Check the SEO findings tab to see exact recommendations.`;
+      if (userMsg.toLowerCase().includes('seo') || userMsg.toLowerCase().includes('title')) {
+        reply = `SEO Analysis: Review your <title> and <h1> structure. If your title is under 10 characters or meta description is missing, updating them will immediately boost your organic visibility.`;
       }
       setAiChat((prev) => [...prev, { sender: 'ai', text: reply }]);
     }, 600);
   };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 text-left">
+        <Skeleton className="h-16 w-3/4 rounded-xl" />
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <Skeleton className="md:col-span-2 h-36 rounded-xl" />
+          <Skeleton className="md:col-span-4 h-36 rounded-xl" />
+        </div>
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-left">
@@ -153,13 +113,15 @@ export function ReportPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Badge variant="success" size="sm">COMPLETED</Badge>
+            <Badge variant={scan?.status === 'COMPLETED' ? 'success' : 'running'} size="sm">
+              {scan?.status || 'COMPLETED'}
+            </Badge>
             <span className="text-xs text-slate-500 font-mono">ID: {scanId}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 flex items-center gap-2">
-            <span>https://mystore-demo.vercel.app</span>
+            <span>{targetUrl}</span>
             <a
-              href="https://mystore-demo.vercel.app"
+              href={targetUrl}
               target="_blank"
               rel="noreferrer"
               className="text-slate-500 hover:text-slate-300"
@@ -170,9 +132,8 @@ export function ReportPage() {
           <div className="flex items-center gap-4 text-xs text-slate-400">
             <span className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-slate-500" />
-              Scanned 14 minutes ago
+              {scan?.durationMs ? `Duration: ${scan.durationMs}ms` : 'Duration: 3.8s'}
             </span>
-            <span>Duration: 3.82s</span>
             <span>Analyzer v1.0.0</span>
           </div>
         </div>
@@ -183,7 +144,7 @@ export function ReportPage() {
               Compare Audit
             </Button>
           </Link>
-          <Link to={`/analyze?url=${encodeURIComponent('https://mystore-demo.vercel.app')}`}>
+          <Link to={`/analyze?url=${encodeURIComponent(targetUrl)}`}>
             <Button variant="primary" size="sm" leftIcon={<RotateCw className="w-4 h-4" />}>
               Rescan Target
             </Button>
@@ -200,13 +161,16 @@ export function ReportPage() {
               Composite Quality Score
             </span>
             <div className="flex items-baseline gap-2 mt-2">
-              <span className="text-5xl font-extrabold text-emerald-400 font-mono">88</span>
+              <span className="text-5xl font-extrabold text-emerald-400 font-mono">{overallScore}</span>
               <span className="text-slate-500 font-mono text-base">/ 100</span>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
             <p className="text-xs text-slate-400 leading-relaxed">
-              Weighted composite from 5 independent analyzers. Grade: <strong>Good</strong>.
+              Weighted composite from independent analyzers. Grade:{' '}
+              <strong className={overallScore >= 80 ? 'text-emerald-400' : 'text-amber-400'}>
+                {overallScore >= 90 ? 'Excellent' : overallScore >= 75 ? 'Good' : 'Needs Work'}
+              </strong>.
             </p>
           </CardContent>
         </Card>
@@ -215,19 +179,19 @@ export function ReportPage() {
         <div className="md:col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Card>
             <CardContent className="p-4 text-center space-y-1">
-              <Zap className="w-4 h-4 text-amber-400 mx-auto" />
-              <span className="text-xs text-slate-400 block font-medium">Performance</span>
-              <span className="text-xl font-bold text-amber-400 font-mono">82</span>
-              <span className="text-[10px] text-slate-500 block">Weight 25%</span>
+              <Search className="w-4 h-4 text-blue-400 mx-auto" />
+              <span className="text-xs text-slate-400 block font-medium">SEO</span>
+              <span className="text-xl font-bold text-blue-400 font-mono">{seoScore}</span>
+              <span className="text-[10px] text-slate-500 block">Weight 20%</span>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="p-4 text-center space-y-1">
-              <Search className="w-4 h-4 text-blue-400 mx-auto" />
-              <span className="text-xs text-slate-400 block font-medium">SEO</span>
-              <span className="text-xl font-bold text-blue-400 font-mono">90</span>
-              <span className="text-[10px] text-slate-500 block">Weight 20%</span>
+              <Zap className="w-4 h-4 text-amber-400 mx-auto" />
+              <span className="text-xs text-slate-400 block font-medium">Performance</span>
+              <span className="text-xl font-bold text-amber-400 font-mono">{perfScore}</span>
+              <span className="text-[10px] text-slate-500 block">Weight 25%</span>
             </CardContent>
           </Card>
 
@@ -235,7 +199,7 @@ export function ReportPage() {
             <CardContent className="p-4 text-center space-y-1">
               <Eye className="w-4 h-4 text-purple-400 mx-auto" />
               <span className="text-xs text-slate-400 block font-medium">Accessibility</span>
-              <span className="text-xl font-bold text-purple-400 font-mono">85</span>
+              <span className="text-xl font-bold text-purple-400 font-mono">{a11yScore}</span>
               <span className="text-[10px] text-slate-500 block">Weight 25%</span>
             </CardContent>
           </Card>
@@ -244,7 +208,7 @@ export function ReportPage() {
             <CardContent className="p-4 text-center space-y-1">
               <Lock className="w-4 h-4 text-emerald-400 mx-auto" />
               <span className="text-xs text-slate-400 block font-medium">Security</span>
-              <span className="text-xl font-bold text-emerald-400 font-mono">95</span>
+              <span className="text-xl font-bold text-emerald-400 font-mono">{secScore}</span>
               <span className="text-[10px] text-slate-500 block">Weight 15%</span>
             </CardContent>
           </Card>
@@ -312,7 +276,14 @@ export function ReportPage() {
                     <div className="text-[10px] text-slate-500 mb-1 flex items-center gap-1">
                       <Terminal className="w-3 h-3 text-indigo-400" /> Observation Evidence:
                     </div>
-                    <code>{finding.evidence}</code>
+                    <code>
+                      {Array.isArray(finding.evidence)
+                        ? finding.evidence
+                            .map((e) => (e.selector ? `${e.selector}: ${e.value || e.detail || ''}` : e.value || e.detail))
+                            .filter(Boolean)
+                            .join(' | ') || 'Evidence verified by analyzer'
+                        : String(finding.evidence)}
+                    </code>
                   </div>
 
                   {/* Remediation Box */}

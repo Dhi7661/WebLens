@@ -4,6 +4,7 @@ import {
   getScanStatus,
   listUserScans,
   retryScan,
+  getScanReport,
 } from './scan.controller.js';
 import { requireAuth } from '../../middleware/auth.js';
 
@@ -15,4 +16,6 @@ scanRouter.use(requireAuth);
 scanRouter.post('/', createScan);
 scanRouter.get('/', listUserScans);
 scanRouter.get('/:id', getScanStatus);
+scanRouter.get('/:id/report', getScanReport);
 scanRouter.post('/:id/retry', retryScan);
+

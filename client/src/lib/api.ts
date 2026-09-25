@@ -103,15 +103,34 @@ export interface ScanRecord {
   createdAt: string;
 }
 
+export interface FindingRecord {
+  id: string;
+  scanId: string;
+  ruleId: string;
+  category: 'SEO' | 'Accessibility' | 'Performance' | 'Security' | 'Technology';
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  title: string;
+  summary: string;
+  explanation: string;
+  remediation: string;
+  evidence: Array<{ selector?: string; value?: string; detail?: string }>;
+  location?: string;
+  docsUrl?: string;
+  fingerprint: string;
+  createdAt: string;
+}
+
 export const scanApi = {
   create: (url: string) => apiClient<{ scan: ScanRecord }>('/scans', {
     method: 'POST',
     body: JSON.stringify({ url }),
   }),
   getStatus: (id: string) => apiClient<{ scan: ScanRecord }>(`/scans/${id}`),
+  getReport: (id: string) => apiClient<{ scan: ScanRecord; findings: FindingRecord[] }>(`/scans/${id}/report`),
   list: () => apiClient<{ scans: ScanRecord[] }>('/scans'),
   retry: (id: string) => apiClient<{ scan: ScanRecord }>(`/scans/${id}/retry`, {
     method: 'POST',
   }),
 };
+
 

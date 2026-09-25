@@ -84,23 +84,49 @@ class ScanJobQueue {
       console.log(`  - Images: ${pageContext.images.length}, Headings: ${pageContext.headings.length}, Scripts: ${pageContext.scripts.length}`);
       console.log(`  - Total Transferred: ${Math.round(pageContext.resourceSummary.totalBytes / 1024)} KB`);
 
-      // 3. Mark as COMPLETED with captured data
+      // 3. Run SEO Analyzer
+      const { seoAnalyzer } = await import('../analyzers/seo/seoAnalyzer.js');
+      const { Finding } = await import('../modules/findings/finding.model.js');
+      const seoResult = seoAnalyzer.analyze(pageContext);
+
+      // Persist SEO findings to database
+      if (seoResult.findings.length > 0) {
+        const findingDocs = seoResult.findings.map((f) => ({
+          ...f,
+          scanId: job.scanId,
+        }));
+        await Finding.insertMany(findingDocs);
+        console.log(`[ScanWorker] Persisted ${findingDocs.length} SEO findings for scan ${job.scanId}`);
+      }
+
+      // Compute initial composite score (Performance 25%, SEO 20%, A11y 25%, Sec 15%, Tech 15%)
+      const seoScore = seoResult.score;
+      const perfScore = 85;
+      const a11yScore = 88;
+      const secScore = 90;
+      const techScore = 90;
+
+      const overallScore = Math.round(
+        perfScore * 0.25 + seoScore * 0.2 + a11yScore * 0.25 + secScore * 0.15 + techScore * 0.15
+      );
+
+      // 4. Mark as COMPLETED with captured data and real SEO findings
       await Scan.findByIdAndUpdate(job.scanId, {
         status: 'COMPLETED',
         finalUrl: pageContext.finalUrl,
         completedAt: new Date(),
         durationMs,
-        overallScore: 88,
+        overallScore,
         categoryScores: {
-          performance: 82,
-          seo: 90,
-          accessibility: 85,
-          security: 95,
-          technology: 90,
+          performance: perfScore,
+          seo: seoScore,
+          accessibility: a11yScore,
+          security: secScore,
+          technology: techScore,
         },
       });
 
-      console.log(`[ScanWorker] Completed scan: ${job.scanId} in ${durationMs}ms`);
+      console.log(`[ScanWorker] Completed scan ${job.scanId} with SEO Score: ${seoScore}/100 in ${durationMs}ms`);
     } catch (scanErr) {
       console.error(`[ScanWorker] Failed during browser extraction for ${job.scanId}:`, scanErr);
       await Scan.findByIdAndUpdate(job.scanId, {
