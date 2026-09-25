@@ -168,6 +168,19 @@ export const scanApi = {
     apiClient<{ scan: ScanRecord; findings: FindingRecord[] }>(`/scans/shared/${token}`),
   getExportJsonUrl: (id: string, token?: string) =>
     `${API_BASE}/scans/${id}/export/json${token ? `?token=${encodeURIComponent(token)}` : ''}`,
+  chatWithCopilot: (
+    id: string,
+    message: string,
+    history?: Array<{ sender: 'user' | 'ai'; text: string }>,
+    token?: string
+  ) =>
+    apiClient<{ reply: string; citations: string[] }>(
+      `/scans/${id}/chat${token ? `?token=${encodeURIComponent(token)}` : ''}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ message, history }),
+      }
+    ),
 };
 
 

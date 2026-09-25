@@ -562,5 +562,69 @@ export async function exportScanJson(req: Request, res: Response): Promise<void>
   }
 }
 
+/**
+ * Handles grounded AI conversations strictly bounded by the scan's findings and evidence.
+ */
+export async function chatWithCopilot(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { message, history } = req.body;
+  const { token } = req.query;
+  const userId = req.user?.userId;
+
+  if (!message || typeof message !== 'string' || !message.trim()) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'INVALID_MESSAGE', message: 'A prompt message is required.' },
+    });
+    return;
+  }
+
+  try {
+    const scan = await Scan.findById(id);
+    if (!scan) {
+      res.status(404).json({
+        success: false,
+        error: { code: 'SCAN_NOT_FOUND', message: 'Scan not found.' },
+      });
+      return;
+    }
+
+    // Must be owner OR have active public share token
+    const isOwner = userId && scan.ownerId.toString() === userId;
+    const isPublicAuthorized = scan.isPublic && scan.shareToken === token;
+
+    if (!isOwner && !isPublicAuthorized) {
+      res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'You do not have permission to access this scan copilot' },
+      });
+      return;
+    }
+
+    const { Finding } = await import('../findings/finding.model.js');
+    const findings = await Finding.find({ scanId: scan._id }).sort({ createdAt: 1 });
+
+    const { aiService } = await import('../ai/ai.service.js');
+    const aiResponse = await aiService.generateResponse(
+      scan,
+      findings,
+      message.trim(),
+      history || []
+    );
+
+    res.status(200).json({
+      success: true,
+      data: aiResponse,
+    });
+  } catch (error) {
+    console.error('[AI Copilot Chat Error]:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'AI_CHAT_FAILED', message: 'Failed to process AI chat query.' },
+    });
+  }
+}
+
+
 
 
