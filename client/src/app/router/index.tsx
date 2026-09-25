@@ -39,6 +39,10 @@ export const router = createBrowserRouter([
         element: <ReportPage />,
       },
       {
+        path: 'share/:shareToken',
+        element: <ReportPage isPublicView />,
+      },
+      {
         path: 'history',
         element: <HistoryPage />,
       },

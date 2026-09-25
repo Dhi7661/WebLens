@@ -32,3 +32,23 @@
     transition: background-color 0.2s ease, color 0.2s ease;
   }
 }
+
+@media print {
+  nav, footer, .print-hide, .ai-copilot-drawer {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  .card, .p-4, .rounded-xl {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+}

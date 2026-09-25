@@ -23,6 +23,8 @@ export interface IScan extends Document {
   durationMs?: number;
   errorCode?: string;
   errorMessage?: string;
+  shareToken?: string;
+  isPublic?: boolean;
   analyzerVersion: string;
   createdAt: Date;
   updatedAt: Date;
@@ -79,6 +81,16 @@ const scanSchema = new Schema<IScan>(
     analyzerVersion: {
       type: String,
       default: '1.0.0',
+    },
+    shareToken: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    isPublic: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
   },
   {
