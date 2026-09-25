@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../features/auth/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui';
 import { User, Mail, Lock, UserPlus, ArrowRight, ShieldCheck } from 'lucide-react';
 
@@ -9,9 +10,10 @@ export function RegisterPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !password) {
       setError('Please fill in all fields');
@@ -24,11 +26,14 @@ export function RegisterPage() {
     setError('');
     setLoading(true);
 
-    // Simulated registration for UI foundation
-    setTimeout(() => {
-      setLoading(false);
+    const res = await register(name, email, password);
+    setLoading(false);
+
+    if (res.success) {
       navigate('/dashboard');
-    }, 800);
+    } else {
+      setError(res.error || 'Registration failed');
+    }
   };
 
   return (

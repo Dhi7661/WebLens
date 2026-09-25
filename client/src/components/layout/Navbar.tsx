@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../../app/providers/ThemeProvider';
+import { useAuth } from '../../features/auth/AuthContext';
 import { Button } from '../ui/Button';
 import {
   ScanSearch,
@@ -9,11 +10,15 @@ import {
   GitCompare,
   Sun,
   Moon,
+  LogOut,
 } from 'lucide-react';
+
 
 export function Navbar() {
   const { setTheme, isDark } = useTheme();
+  const { user, logout } = useAuth();
   const location = useLocation();
+
 
 
   const navLinks = [
@@ -90,16 +95,46 @@ export function Navbar() {
 
           {/* Auth Action */}
           <div className="flex items-center gap-2">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">
-                Sign In
-              </Button>
-            </Link>
-            <Link to="/register">
-              <Button variant="primary" size="sm">
-                Get Started
-              </Button>
-            </Link>
+            {user ? (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-cyan-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="hidden sm:flex flex-col text-left">
+                    <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-tight">
+                      {user.name}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {user.email}
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="text-slate-500 hover:text-rose-500 hover:bg-rose-500/10"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button variant="primary" size="sm">
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

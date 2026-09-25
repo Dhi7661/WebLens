@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../features/auth/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui';
 import { Mail, Lock, LogIn, ArrowRight, ShieldCheck } from 'lucide-react';
 
@@ -8,7 +9,10 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,11 +23,14 @@ export function LoginPage() {
     setError('');
     setLoading(true);
 
-    // Simulated login for UI foundation (will connect to real JWT auth in Phase 2)
-    setTimeout(() => {
-      setLoading(false);
-      navigate('/dashboard');
-    }, 800);
+    const res = await login(email, password);
+    setLoading(false);
+
+    if (res.success) {
+      navigate(redirectTo);
+    } else {
+      setError(res.error || 'Invalid email or password');
+    }
   };
 
   const handleDemoFill = () => {
