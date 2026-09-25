@@ -27,6 +27,15 @@ app.get('/api/health', (_req: Request, res: Response) => {
   });
 });
 
+// Authentication routes
+import { authRouter } from './modules/auth/auth.routes.js';
+import { requireAuth } from './middleware/auth.js';
+import { getCurrentUser } from './modules/auth/auth.controller.js';
+
+app.use('/api/auth', authRouter);
+app.get('/api/me', requireAuth, getCurrentUser);
+
+
 // 404 Handler
 app.use((_req: Request, res: Response) => {
   res.status(404).json({
