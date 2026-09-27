@@ -33,15 +33,16 @@ app.get('/api/health', (_req: Request, res: Response) => {
   });
 });
 
-// Authentication & resource routes
 import { authRouter } from './modules/auth/auth.routes.js';
 import { scanRouter } from './modules/scans/scan.routes.js';
 import { websiteRouter } from './modules/websites/website.routes.js';
+import { userRouter } from './modules/users/user.routes.js';
 import { requireAuth } from './middleware/auth.js';
 import { getCurrentUser } from './modules/auth/auth.controller.js';
 
 app.use('/api/auth', authRouter);
 app.get('/api/me', requireAuth, getCurrentUser);
+app.use('/api/users', userRouter);
 app.use('/api/scans', scanRouter);
 app.use('/api/websites', websiteRouter);
 

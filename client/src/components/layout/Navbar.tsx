@@ -11,6 +11,7 @@ import {
   Sun,
   Moon,
   LogOut,
+  Settings,
 } from 'lucide-react';
 
 
@@ -110,6 +111,16 @@ export function Navbar() {
                     </span>
                   </div>
                 </div>
+
+                <Link to="/settings" title="Settings & API Keys">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                </Link>
 
                 <Button
                   variant="ghost"

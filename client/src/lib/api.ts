@@ -242,5 +242,59 @@ export const websiteApi = {
     }),
 };
 
+export interface ApiKeyRecord {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  secretKey?: string; // Only present upon creation
+}
+
+export interface UserPreferences {
+  theme: 'system' | 'dark' | 'light';
+  emailAlerts: boolean;
+  defaultFrequency: 'hourly' | 'daily' | 'weekly';
+}
+
+export interface UserProfileData {
+  id: string;
+  name: string;
+  email: string;
+  role: 'USER' | 'ADMIN';
+  avatarUrl?: string;
+  preferences: UserPreferences;
+  createdAt: string;
+}
+
+export const userApi = {
+  getProfile: () => apiClient<{ user: UserProfileData }>('/users/profile'),
+  updateProfile: (data: {
+    name?: string;
+    avatarUrl?: string;
+    preferences?: Partial<UserPreferences>;
+  }) =>
+    apiClient<{ user: UserProfileData }>('/users/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    apiClient<{ message: string }>('/users/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  listApiKeys: () => apiClient<{ apiKeys: ApiKeyRecord[] }>('/users/api-keys'),
+  createApiKey: (name: string) =>
+    apiClient<{ apiKey: ApiKeyRecord }>('/users/api-keys', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+  revokeApiKey: (id: string) =>
+    apiClient<{ message: string }>(`/users/api-keys/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
+
 
 
