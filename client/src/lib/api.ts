@@ -99,6 +99,9 @@ export interface ScanRecord {
   durationMs?: number;
   errorCode?: string;
   errorMessage?: string;
+  shareToken?: string;
+  isPublic?: boolean;
+  trigger?: 'manual' | 'scheduled';
   analyzerVersion: string;
   createdAt: string;
 }

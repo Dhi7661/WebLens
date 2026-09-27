@@ -471,7 +471,7 @@ function FindingsList({ findings, type, emptyMessage }: FindingsListProps) {
                   <Badge variant="success" size="sm">Fixed</Badge>
                 )}
                 {type === 'persistent' && (
-                  <Badge variant="warning" size="sm">Persistent</Badge>
+                  <Badge variant="medium" size="sm">Persistent</Badge>
                 )}
 
                 <Badge variant="default" size="sm">{f.category}</Badge>
