@@ -66,6 +66,7 @@ export function SettingsPage() {
   const [keyErrorMsg, setKeyErrorMsg] = useState<string | null>(null);
 
   // Snippet Copy State
+  const [snippetPlatform, setSnippetPlatform] = useState<'powershell' | 'curl' | 'github' | 'node'>('powershell');
   const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
 
   // Load Profile and API keys
@@ -223,10 +224,27 @@ export function SettingsPage() {
     }
   };
 
+  const powershellSnippet = `Invoke-RestMethod -Uri "http://localhost:5000/api/scans" \`
+  -Method Post \`
+  -Headers @{ Authorization = "Bearer <YOUR_API_KEY>" } \`
+  -ContentType "application/json" \`
+  -Body '{"url": "https://example.com"}'`;
+
   const curlSnippet = `curl -X POST http://localhost:5000/api/scans \\
   -H "Authorization: Bearer <YOUR_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{"url": "https://example.com"}'`;
+
+  const nodeSnippet = `const res = await fetch('http://localhost:5000/api/scans', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer <YOUR_API_KEY>',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ url: 'https://example.com' }),
+});
+const data = await res.json();
+console.log(data);`;
 
   const githubActionsSnippet = `name: WebLens Quality Gate
 on: [push, pull_request]
@@ -619,46 +637,143 @@ jobs:
                 Copy and run audits directly from your terminal or CI/CD pipelines
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* cURL Snippet */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                    <Code className="w-3.5 h-3.5 text-indigo-400" />
-                    cURL Command
-                  </span>
-                  <button
-                    onClick={() => copyToClipboard(curlSnippet, 'curl')}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
-                  >
-                    {copiedSnippet === 'curl' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                    <span>{copiedSnippet === 'curl' ? 'Copied' : 'Copy cURL'}</span>
-                  </button>
-                </div>
-                <pre className="p-3 bg-slate-950 font-mono text-xs text-slate-300 rounded-lg border border-slate-800 overflow-x-auto">
-                  {curlSnippet}
-                </pre>
+            <CardContent className="space-y-4">
+              {/* Platform Switcher Pills */}
+              <div className="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
+                <button
+                  type="button"
+                  onClick={() => setSnippetPlatform('powershell')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    snippetPlatform === 'powershell'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-950/80 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  PowerShell (Windows)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSnippetPlatform('curl')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    snippetPlatform === 'curl'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-950/80 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  cURL (macOS / Linux)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSnippetPlatform('github')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    snippetPlatform === 'github'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-950/80 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  GitHub Actions CI
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSnippetPlatform('node')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    snippetPlatform === 'node'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-950/80 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Node.js (Fetch)
+                </button>
               </div>
 
-              {/* GitHub Actions Snippet */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                    <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
-                    GitHub Actions Quality Gate (.github/workflows/audit.yml)
-                  </span>
-                  <button
-                    onClick={() => copyToClipboard(githubActionsSnippet, 'gh')}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
-                  >
-                    {copiedSnippet === 'gh' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                    <span>{copiedSnippet === 'gh' ? 'Copied' : 'Copy Workflow'}</span>
-                  </button>
+              {/* Code Snippet Display with Copy Button */}
+              {snippetPlatform === 'powershell' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                      <Terminal className="w-3.5 h-3.5 text-indigo-400" />
+                      Windows PowerShell Command
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(powershellSnippet, 'powershell')}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedSnippet === 'powershell' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedSnippet === 'powershell' ? 'Copied!' : 'Copy Command'}</span>
+                    </button>
+                  </div>
+                  <pre className="p-3 bg-slate-950 font-mono text-xs text-slate-300 rounded-lg border border-slate-800 overflow-x-auto">
+                    {powershellSnippet}
+                  </pre>
                 </div>
-                <pre className="p-3 bg-slate-950 font-mono text-xs text-slate-300 rounded-lg border border-slate-800 overflow-x-auto">
-                  {githubActionsSnippet}
-                </pre>
-              </div>
+              )}
+
+              {snippetPlatform === 'curl' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                      <Code className="w-3.5 h-3.5 text-indigo-400" />
+                      cURL Command (Bash / Linux / macOS)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(curlSnippet, 'curl')}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedSnippet === 'curl' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedSnippet === 'curl' ? 'Copied!' : 'Copy cURL'}</span>
+                    </button>
+                  </div>
+                  <pre className="p-3 bg-slate-950 font-mono text-xs text-slate-300 rounded-lg border border-slate-800 overflow-x-auto">
+                    {curlSnippet}
+                  </pre>
+                </div>
+              )}
+
+              {snippetPlatform === 'github' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                      <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
+                      GitHub Actions Quality Gate (.github/workflows/audit.yml)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(githubActionsSnippet, 'gh')}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedSnippet === 'gh' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedSnippet === 'gh' ? 'Copied!' : 'Copy Workflow'}</span>
+                    </button>
+                  </div>
+                  <pre className="p-3 bg-slate-950 font-mono text-xs text-slate-300 rounded-lg border border-slate-800 overflow-x-auto">
+                    {githubActionsSnippet}
+                  </pre>
+                </div>
+              )}
+
+              {snippetPlatform === 'node' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                      <Code className="w-3.5 h-3.5 text-indigo-400" />
+                      Node.js Script (Fetch API)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(nodeSnippet, 'node')}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedSnippet === 'node' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedSnippet === 'node' ? 'Copied!' : 'Copy Node.js'}</span>
+                    </button>
+                  </div>
+                  <pre className="p-3 bg-slate-950 font-mono text-xs text-slate-300 rounded-lg border border-slate-800 overflow-x-auto">
+                    {nodeSnippet}
+                  </pre>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
