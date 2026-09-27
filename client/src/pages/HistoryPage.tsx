@@ -372,7 +372,7 @@ export function HistoryPage() {
                     <CardTitle className="text-sm">Automated Audit Schedule</CardTitle>
                   </div>
                   <Badge
-                    variant={historyData?.website.monitoringEnabled ? 'success' : 'neutral'}
+                    variant={historyData?.website.monitoringEnabled ? 'success' : 'default'}
                     size="sm"
                   >
                     {historyData?.website.monitoringEnabled ? 'Active' : 'Paused'}
@@ -393,7 +393,7 @@ export function HistoryPage() {
                     </div>
                   </div>
                   <Button
-                    variant={historyData?.website.monitoringEnabled ? 'destructive' : 'primary'}
+                    variant={historyData?.website.monitoringEnabled ? 'danger' : 'primary'}
                     size="sm"
                     onClick={handleToggleMonitoring}
                     disabled={updatingMonitoring || loadingHistory}
@@ -703,8 +703,8 @@ export function HistoryPage() {
                                   scan.status === 'COMPLETED'
                                     ? 'success'
                                     : scan.status === 'FAILED'
-                                    ? 'destructive'
-                                    : 'secondary'
+                                    ? 'critical'
+                                    : 'default'
                                 }
                                 size="sm"
                               >

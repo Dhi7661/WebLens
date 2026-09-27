@@ -23,7 +23,6 @@ import {
   AlertTriangle,
   Lock,
   Save,
-  Clock,
   Sparkles,
   ExternalLink,
   Code,
@@ -375,7 +374,7 @@ jobs:
                     <label className="block text-xs font-semibold text-slate-400 mb-1">
                       Account Role
                     </label>
-                    <Badge variant="secondary" size="md">
+                    <Badge variant="default" size="md">
                       {profile?.role || user?.role || 'USER'}
                     </Badge>
                   </div>
