@@ -8,6 +8,8 @@ import { AnalyzePage } from '../../pages/AnalyzePage';
 import { ReportPage } from '../../pages/ReportPage';
 import { HistoryPage } from '../../pages/HistoryPage';
 import { ComparePage } from '../../pages/ComparePage';
+import { SettingsPage } from '../../pages/SettingsPage';
+import { ProtectedRoute } from '../../components/layout/ProtectedRoute';
 
 export const router = createBrowserRouter([
   {
@@ -49,6 +51,14 @@ export const router = createBrowserRouter([
       {
         path: 'compare',
         element: <ComparePage />,
+      },
+      {
+        path: 'settings',
+        element: (
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: '*',
