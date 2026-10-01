@@ -7,10 +7,19 @@ dotenv.config();
 
 export const app = express();
 
+// Trust reverse proxy in production (Render, Railway, Nginx, Cloudflare)
+app.set('trust proxy', 1);
+
 // Middlewares
+const clientOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.includes(',')
+    ? process.env.CLIENT_URL.split(',').map((s) => s.trim())
+    : process.env.CLIENT_URL
+  : 'http://localhost:5173';
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: clientOrigins,
     credentials: true,
   })
 );
