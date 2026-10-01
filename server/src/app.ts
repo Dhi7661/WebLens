@@ -30,6 +30,17 @@ app.use(cookieParser());
 import mongoose from 'mongoose';
 import { lastDbError } from './db/connection.js';
 
+// Friendly API root endpoint
+app.get('/', (_req: Request, res: Response) => {
+  res.status(200).json({
+    name: 'WebLens Intelligence API',
+    version: '1.0.0',
+    status: 'online',
+    healthCheck: '/api/health',
+    documentation: 'https://github.com/Dhi7661/WebLens',
+  });
+});
+
 // Basic health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {
   const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
