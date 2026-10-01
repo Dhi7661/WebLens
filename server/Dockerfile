@@ -27,18 +27,24 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-    NODE_ENV=production
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
+# Copy dependency definitions and install all dependencies (including TypeScript for compilation)
 COPY package*.json ./
 RUN npm ci
 
+# Copy source code and compile TypeScript to JavaScript
 COPY . .
 RUN npm run build
 
-ENV PORT=5000
+# Remove development dependencies to keep the image compact
+RUN npm prune --production
+
+ENV NODE_ENV=production \
+    PORT=5000
+
 EXPOSE 5000
 
 CMD ["node", "dist/server.js"]
