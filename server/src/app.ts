@@ -66,6 +66,13 @@ app.use('/api/users', userRouter);
 app.use('/api/scans', scanRouter);
 app.use('/api/websites', websiteRouter);
 
+// Fallback aliases without /api prefix
+app.use('/auth', authRouter);
+app.get('/me', requireAuth, getCurrentUser);
+app.use('/users', userRouter);
+app.use('/scans', scanRouter);
+app.use('/websites', websiteRouter);
+
 // Local test website for deterministic analyzer testing (Spec Item 55)
 import { serveDemoTarget } from './modules/demo/demoTarget.js';
 app.get('/demo-target', serveDemoTarget);
